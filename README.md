@@ -107,7 +107,7 @@ Please, send your suggestions and feedback - Thank you for using or trying out t
 ### Minimum Requirements
 
 * WordPress version 4.7 or higher
-* [Elementor](https://wordpress.org/plugins/elementor/) and [Polylang](https://wordpress.org/plugins/polylang/) plugins - free versions from WordPress.org Plugin Directory
+* [Elementor](https://wordpress.org/plugins/elementor/) and [Polylang](https://wordpress.org/plugins/polylang/) plugins - free versions from WordPress.org Plugin Directory ([Polylang Pro](https://polylang.pro/) works too)
 * **Recommended:** [**Elementor Pro**](https://be.elementor.com/visit/?bta=61741&brand=elementor&utm_campaign=github) *(affiliate link)* which is needed for Theme Building possibilities (header, footer, 404, archive templates, etc.) and Dynamic Tags.
 
 ### Installation
@@ -198,6 +198,11 @@ There are quite a few:
 
 
 ## Changelog
+
+## Version 2.6.1 | 2026-07-27
+
+* **Fixed:** The plugin could not be activated on sites running **Polylang Pro**. The `Requires Plugins` header matched only the free Polylang plugin folder, and Polylang and Polylang Pro cannot be active at the same time. Polylang is now checked at runtime, which accepts both versions.
+* **Added:** Admin notice when Polylang or Elementor is missing, instead of the plugin staying silently inactive.
 
 ## Version 2.6.0 | 2026-01-16 
 

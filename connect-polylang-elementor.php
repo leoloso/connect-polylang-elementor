@@ -10,7 +10,7 @@
  * Plugin Name:       Connect Polylang for Elementor
  * Plugin URI:        https://github.com/creame/connect-polylang-elementor
  * Description:       Connect Polylang with Elementor. Display templates in the correct language, language switcher widget, language visibility conditions and dynamic tags.
- * Version:           2.6.0
+ * Version:           2.6.1
  * Author:            Creame
  * Author URI:        https://crea.me/
  * License:           GPL-2.0-or-later
@@ -19,12 +19,19 @@
  * Domain Path:       /languages/
  * Requires WP:       5.4
  * Requires PHP:      5.6
- * Requires Plugins:  polylang, elementor
+ * Requires Plugins:  elementor
  * Elementor tested up to: 3.34.1
  * Elementor Pro tested up to: 3.34.1
  *
  * Copyright (c) 2021 Paco Toledo - CREAME
  * Copyright (c) 2018-2021 David Decker - DECKERWEB
+ *
+ * Note: Polylang is deliberately absent from "Requires Plugins". That header
+ * matches plugin folder names and has no "or" syntax, so requiring "polylang"
+ * makes WordPress block activation on sites running Polylang Pro (which lives
+ * in "polylang-pro" and cannot be active alongside the free version).
+ * Polylang is checked at runtime instead, see cpel_is_polylang_api_active().
+ * View https://github.com/creame/connect-polylang-elementor/issues/32
  */
 
 namespace ConnectPolylangElementor;
@@ -37,7 +44,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 2.0.0
  */
-define( 'CPEL_PLUGIN_VERSION', '2.6.0' );
+define( 'CPEL_PLUGIN_VERSION', '2.6.1' );
 define( 'CPEL_FILE', __FILE__ );
 define( 'CPEL_DIR', plugin_dir_path( CPEL_FILE ) );
 define( 'CPEL_BASENAME', plugin_basename( CPEL_FILE ) );
@@ -114,6 +121,13 @@ function setup() {
 		DynamicTags\Manager::instance();
 		Finder\Manager::instance();
 		Widgets\Manager::instance();
+
+	} elseif ( is_admin() || is_network_admin() ) {
+
+		// Polylang is not enforced through the "Requires Plugins" header (see the
+		// note in the plugin file header), so warn about missing requirements here.
+		add_action( 'admin_notices', 'cpel_missing_requirements_notice' );
+		add_action( 'network_admin_notices', 'cpel_missing_requirements_notice' );
 
 	}
 
