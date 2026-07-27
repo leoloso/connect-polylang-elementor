@@ -1,0 +1,146 @@
+name: Build plugin zip
+
+# The zip is built with `git archive`, so it contains only tracked files minus
+# everything marked `export-ignore` in .gitattributes. That keeps the exclusion
+# list versioned in one place instead of duplicated here, and guarantees no
+# stray local file can leak into a release.
+
+on:
+    release:
+        types: [published]
+    push:
+        branches:
+            - master
+            - versions/*
+    pull_request: null
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.meta.outputs.version }}
+            zip: ${{ steps.meta.outputs.zip }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Read version from the plugin header
+              id: meta
+              run: |
+                  set -euo pipefail
+                  version="$(grep -m1 -E '^[[:space:]]*\*[[:space:]]*Version:' connect-polylang-elementor.php \
+                      | sed -E 's/.*Version:[[:space:]]*//; s/[[:space:]]*$//')"
+                  if [ -z "$version" ]; then
+                      echo "::error file=connect-polylang-elementor.php::Could not read the Version header"
+                      exit 1
+                  fi
+                  echo "Plugin version: $version"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  echo "zip=connect-polylang-elementor-$version.zip" >> "$GITHUB_OUTPUT"
+
+            # Cheap gate so a fatal parse error can never reach a release asset.
+            # Uses the PHP preinstalled on the runner image.
+            - name: Lint PHP
+              run: |
+                  set -euo pipefail
+                  php -v | head -n1
+                  find . -path ./.git -prune -o -name '*.php' -print0 \
+                      | xargs -0 -n1 -P4 php -l > /dev/null
+
+            - name: Build zip
+              env:
+                  ZIP: ${{ steps.meta.outputs.zip }}
+              run: |
+                  set -euo pipefail
+                  # --prefix puts everything under the plugin slug directory, which
+                  # WordPress requires: the folder name is the plugin's identity.
+                  git archive --format=zip --prefix=connect-polylang-elementor/ --output="$ZIP" HEAD
+                  ls -lh "$ZIP"
+
+            - name: Verify zip contents
+              env:
+                  ZIP: ${{ steps.meta.outputs.zip }}
+              run: |
+                  set -euo pipefail
+                  unzip -Z1 "$ZIP" > /tmp/entries.txt
+                  echo "$(wc -l < /tmp/entries.txt) entries"
+
+                  # Nothing may sit outside the slug directory.
+                  if grep -qv '^connect-polylang-elementor/' /tmp/entries.txt; then
+                      echo "::error::Zip has entries outside connect-polylang-elementor/"
+                      grep -v '^connect-polylang-elementor/' /tmp/entries.txt
+                      exit 1
+                  fi
+
+                  failed=0
+
+                  for required in \
+                      connect-polylang-elementor/connect-polylang-elementor.php \
+                      connect-polylang-elementor/README.txt \
+                      connect-polylang-elementor/LICENSE.txt \
+                      connect-polylang-elementor/languages/connect-polylang-elementor.pot \
+                      connect-polylang-elementor/includes/functions.php \
+                      connect-polylang-elementor/helpers/cpel-helpers.php \
+                      connect-polylang-elementor/assets/flags/us.svg
+                  do
+                      if ! grep -qxF "$required" /tmp/entries.txt; then
+                          echo "::error::Missing from zip: $required"
+                          failed=1
+                      fi
+                  done
+
+                  for excluded in \
+                      .editorconfig .gitattributes .github .gitignore \
+                      assets-repos composer.json phpcs.ruleset.xml README.md LICENSE \
+                      languages/README.md languages/readme.txt
+                  do
+                      # Match the entry exactly, or as a directory prefix. A bare
+                      # prefix match would flag LICENSE for shipping LICENSE.txt.
+                      if grep -qxF "connect-polylang-elementor/$excluded" /tmp/entries.txt \
+                          || grep -qF "connect-polylang-elementor/$excluded/" /tmp/entries.txt; then
+                          echo "::error::Should not ship: $excluded"
+                          failed=1
+                      fi
+                  done
+
+                  exit $failed
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: connect-polylang-elementor-${{ steps.meta.outputs.version }}
+                  path: ${{ steps.meta.outputs.zip }}
+                  if-no-files-found: error
+
+    release:
+        name: Attach to release
+        needs: build
+        if: github.event_name == 'release'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Check the tag matches the plugin version
+              env:
+                  TAG: ${{ github.event.release.tag_name }}
+                  VERSION: ${{ needs.build.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  if [ "${TAG#v}" != "$VERSION" ]; then
+                      echo "::error::Tag $TAG does not match the plugin header version $VERSION"
+                      exit 1
+                  fi
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: connect-polylang-elementor-${{ needs.build.outputs.version }}
+
+            - name: Upload zip to the release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  REPO: ${{ github.repository }}
+                  TAG: ${{ github.event.release.tag_name }}
+                  ZIP: ${{ needs.build.outputs.zip }}
+              run: gh release upload "$TAG" "$ZIP" --clobber --repo "$REPO"
