@@ -1,2 +1,24 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Everything below is excluded from the distributable plugin zip, which is built
+# with `git archive` by .github/workflows/build-plugin-zip.yml. Development-only
+# files, GitHub/wordpress.org artwork and duplicated docs do not belong in an
+# install. Anything not listed here ships, so add new dev files to this list.
+/.editorconfig          export-ignore
+/.gitattributes         export-ignore
+/.github                export-ignore
+/.gitignore             export-ignore
+/assets-repos           export-ignore
+/composer.json          export-ignore
+/phpcs.ruleset.xml      export-ignore
+
+# README.txt is the plugin readme; README.md is for GitHub only.
+/README.md              export-ignore
+
+# Byte-identical duplicate of LICENSE.txt, which is the one that ships.
+/LICENSE                export-ignore
+
+# Notes for translators; the .pot file itself ships.
+/languages/README.md    export-ignore
+/languages/readme.txt   export-ignore
