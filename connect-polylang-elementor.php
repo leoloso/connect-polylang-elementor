@@ -8,7 +8,8 @@
  *
  * @wordpress-plugin
  * Plugin Name:       Connect Polylang for Elementor
- * Plugin URI:        https://github.com/creame/connect-polylang-elementor
+ * Plugin URI:        https://github.com/leoloso/connect-polylang-elementor
+ * Update URI:        false
  * Description:       Connect Polylang with Elementor. Display templates in the correct language, language switcher widget, language visibility conditions and dynamic tags.
  * Version:           2.6.1
  * Author:            Creame
@@ -32,6 +33,17 @@
  * in "polylang-pro" and cannot be active alongside the free version).
  * Polylang is checked at runtime instead, see cpel_is_polylang_api_active().
  * View https://github.com/creame/connect-polylang-elementor/issues/32
+ *
+ * Note: this is a fork, installed in a directory whose name matches the plugin
+ * of the same slug in the WordPress.org Plugin Directory. Without an
+ * "Update URI" header, WordPress.org would offer its own releases for this
+ * install and silently overwrite the fork. Because this header is not
+ * https://wordpress.org/plugins/{$slug}/, the API ignores the plugin for
+ * update purposes and no update is offered.
+ * Requires WordPress 5.8+ (the header is ignored on older versions).
+ * The value "false" means no updates from anywhere: apply changes from the
+ * fork manually, or implement the "update_plugins_false" filter to serve them.
+ * View https://make.wordpress.org/core/2021/06/29/introducing-update-uri-plugin-header-in-wordpress-5-8/
  */
 
 namespace ConnectPolylangElementor;
