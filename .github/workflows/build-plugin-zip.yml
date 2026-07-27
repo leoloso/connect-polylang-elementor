@@ -75,7 +75,7 @@ jobs:
                       exit 1
                   fi
 
-                  status=0
+                  failed=0
 
                   for required in \
                       connect-polylang-elementor/connect-polylang-elementor.php \
@@ -88,21 +88,25 @@ jobs:
                   do
                       if ! grep -qxF "$required" /tmp/entries.txt; then
                           echo "::error::Missing from zip: $required"
-                          status=1
+                          failed=1
                       fi
                   done
 
                   for excluded in \
                       .editorconfig .gitattributes .github .gitignore \
-                      assets-repos composer.json phpcs.ruleset.xml README.md LICENSE
+                      assets-repos composer.json phpcs.ruleset.xml README.md LICENSE \
+                      languages/README.md languages/readme.txt
                   do
-                      if grep -q "^connect-polylang-elementor/$excluded" /tmp/entries.txt; then
+                      # Match the entry exactly, or as a directory prefix. A bare
+                      # prefix match would flag LICENSE for shipping LICENSE.txt.
+                      if grep -qxF "connect-polylang-elementor/$excluded" /tmp/entries.txt \
+                          || grep -qF "connect-polylang-elementor/$excluded/" /tmp/entries.txt; then
                           echo "::error::Should not ship: $excluded"
-                          status=1
+                          failed=1
                       fi
                   done
 
-                  exit $status
+                  exit $failed
 
             - uses: actions/upload-artifact@v4
               with:
